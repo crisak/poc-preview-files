@@ -88,8 +88,43 @@ function InlinePreview({ fileUrl }: Props) {
   const handlePrint = () => {
     try {
       const i = iframeRef.current;
-      if (i?.contentWindow) {
-        i.contentWindow.print();
+      if (!i) {
+        setError("Iframe not available for printing");
+        return;
+      }
+
+      // Try different printing methods for better Android compatibility
+      try {
+        // Method 1: Direct iframe print (works on desktop)
+        if (i.contentWindow) {
+          i.contentWindow.print();
+          return;
+        }
+      } catch (crossOriginError) {
+        console.log(
+          "Cross-origin print blocked, trying alternative method...",
+          crossOriginError
+        );
+      }
+
+      // Method 2: Open PDF in new window for printing (Android compatible)
+      if (blobUrl) {
+        const printWindow = window.open(
+          blobUrl,
+          "_blank",
+          "width=800,height=600"
+        );
+        if (printWindow) {
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 1000); // Wait for PDF to load
+          };
+        } else {
+          setError("Please allow popups to print this document");
+        }
+      } else {
+        setError("PDF not loaded yet");
       }
     } catch (error) {
       console.error("Error printing PDF:", error);
