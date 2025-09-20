@@ -28,9 +28,8 @@ export function SharePrintButton({
       });
 
       // 2.2 show alert if support share API or not
-      if ((navigator as any)?.share || (navigator as any)?.canShare) {
-        alert("✅ Browser supported share API");
-      } else {
+      const shareSupport = (navigator as any)?.share || (navigator as any)?.canShare;
+      if (!shareSupport) {
         alert("❌ Browser not supported share API");
       }
 
