@@ -11,6 +11,7 @@ function InlinePreview({ fileUrl }: Props) {
   const [blobUrl, setBlobUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [iframeReady, setIframeReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -21,57 +22,29 @@ function InlinePreview({ fileUrl }: Props) {
         setLoading(true);
         setError("");
 
-        // Use XMLHttpRequest to download the file as bytes (similar to current app)
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", fileUrl, true);
-        xhr.responseType = "blob";
-        xhr.withCredentials = false;
-
-        await new Promise((resolve, reject) => {
-          xhr.onload = () => {
-            if (xhr.status === 200) {
-              const blob = xhr.response;
-              url = URL.createObjectURL(blob);
-              if (active) setBlobUrl(url);
-              resolve(true);
-            } else {
-              reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-            }
-          };
-
-          xhr.onerror = () => {
-            reject(new Error("Network error occurred"));
-          };
-
-          xhr.ontimeout = () => {
-            reject(new Error("Request timeout"));
-          };
-
-          xhr.timeout = 30000; // 30 seconds timeout
-          xhr.send();
+        // Use fetch API to download the file
+        const response = await fetch(fileUrl, {
+          credentials: "include",
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        url = URL.createObjectURL(blob);
+
+        if (active) {
+          setBlobUrl(url);
+          // Reset iframe ready state when new URL is set
+          setIframeReady(false);
+        }
       } catch (err) {
         if (active) {
-          // Fallback: try with fetch and no-cors mode
-          try {
-            const response = await fetch(fileUrl, {
-              mode: "no-cors",
-              credentials: "omit",
-            });
-
-            if (response.type === "opaque") {
-              // For opaque responses, we can't read the content but we can use the URL directly
-              if (active) setBlobUrl(fileUrl);
-            } else {
-              const blob = await response.blob();
-              url = URL.createObjectURL(blob);
-              if (active) setBlobUrl(url);
-            }
-          } catch (fallbackErr) {
-            setError(
-              "Cannot load PDF due to CORS restrictions. Please try the PDF.js solution or use a CORS-enabled URL."
-            );
-          }
+          console.error("Error loading PDF:", err);
+          setError(
+            `Error loading file: ${err instanceof Error ? err.message : "Unknown error"}`
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -129,12 +102,27 @@ function InlinePreview({ fileUrl }: Props) {
       )}
 
       {blobUrl && !loading && (
-        <iframe
-          ref={iframeRef}
-          src={blobUrl}
-          title="Preview"
-          className="flex-1 w-full border-0"
-        />
+        <div className="flex-1 w-full">
+          {!iframeReady && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-lg">Loading PDF...</div>
+            </div>
+          )}
+          <iframe
+            ref={iframeRef}
+            src={blobUrl}
+            title="Preview"
+            className={`flex-1 w-full border-0 ${iframeReady ? "block" : "hidden"}`}
+            onLoad={() => {
+              // Ensure iframe is fully loaded before showing
+              console.log("Iframe loaded successfully");
+              setIframeReady(true);
+            }}
+            onError={() => {
+              setError("Failed to load PDF in iframe");
+            }}
+          />
+        </div>
       )}
     </div>
   );

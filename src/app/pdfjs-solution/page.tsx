@@ -12,6 +12,75 @@ if (typeof window !== "undefined") {
   pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 }
 
+// PDF loading strategies
+const loadPdfDirectUrl = async (fileUrl: string) => {
+  console.log("[pdfjsLib] Trying direct URL...");
+  return await pdfjsLib.getDocument({
+    url: fileUrl,
+    withCredentials: false,
+    httpHeaders: {
+      Accept: "application/pdf",
+    },
+  }).promise;
+};
+
+const loadPdfWithFetch = async (fileUrl: string) => {
+  console.log("[fetch] Trying fetch with credentials...");
+  const response = await fetch(fileUrl, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return await pdfjsLib.getDocument({
+    data: arrayBuffer,
+  }).promise;
+};
+
+const loadPdfWithProxy = async (fileUrl: string) => {
+  console.log("[proxy] Trying public CORS proxy...");
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`;
+  const proxyResponse = await fetch(proxyUrl);
+
+  if (!proxyResponse.ok) {
+    throw new Error(
+      `Proxy failed: ${proxyResponse.status} ${proxyResponse.statusText}`
+    );
+  }
+
+  const arrayBuffer = await proxyResponse.arrayBuffer();
+  return await pdfjsLib.getDocument({
+    data: arrayBuffer,
+  }).promise;
+};
+
+const loadPdfWithStrategies = async (fileUrl: string) => {
+  const strategies = [
+    { name: "Direct URL", fn: () => loadPdfDirectUrl(fileUrl) },
+    { name: "Fetch", fn: () => loadPdfWithFetch(fileUrl) },
+    { name: "Proxy", fn: () => loadPdfWithProxy(fileUrl) },
+  ];
+
+  for (const strategy of strategies) {
+    try {
+      console.log(`[${strategy.name}] Attempting to load PDF...`);
+      const pdfDoc = await strategy.fn();
+      debugger;
+      console.log(`[${strategy.name}] PDF loaded successfully`);
+      return pdfDoc;
+    } catch (error) {
+      debugger;
+      console.error(`[${strategy.name}] Failed:`, error);
+      if (strategy === strategies[strategies.length - 1]) {
+        throw new Error("All loading strategies failed");
+      }
+    }
+  }
+};
+
 function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
@@ -19,6 +88,7 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pdf, setPdf] = useState<any>(null);
 
@@ -36,119 +106,14 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
         setError("");
 
         // Try multiple strategies to load the PDF
-        let pdfDoc;
-        let loadSuccess = false;
-
-        // Strategy 1: Try to load directly from URL (works for some CORS scenarios)
-        try {
-          pdfDoc = await pdfjsLib.getDocument({
-            url: fileUrl,
-            withCredentials: false,
-            httpHeaders: {
-              Accept: "application/pdf",
-            },
-          }).promise;
-          loadSuccess = true;
-          console.log("PDF loaded successfully via direct URL");
-        } catch (directError) {
-          console.log(
-            "Direct URL failed, trying XMLHttpRequest...",
-            directError
-          );
-
-          // Strategy 2: Download as bytes using XMLHttpRequest
-          try {
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", fileUrl, true);
-            xhr.responseType = "arraybuffer";
-            xhr.withCredentials = false;
-
-            const pdfData = await new Promise<ArrayBuffer>(
-              (resolve, reject) => {
-                xhr.onload = () => {
-                  if (xhr.status === 200) {
-                    resolve(xhr.response);
-                  } else {
-                    reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-                  }
-                };
-                xhr.onerror = () => reject(new Error("Network error occurred"));
-                xhr.ontimeout = () => reject(new Error("Request timeout"));
-                xhr.timeout = 30000;
-                xhr.send();
-              }
-            );
-
-            // Load PDF from downloaded data
-            pdfDoc = await pdfjsLib.getDocument({
-              data: pdfData,
-            }).promise;
-            loadSuccess = true;
-            console.log("PDF loaded successfully via XMLHttpRequest");
-          } catch (xhrError) {
-            console.log("XMLHttpRequest failed, trying fetch...", xhrError);
-
-            // Strategy 3: Try fetch with no-cors mode
-            try {
-              const response = await fetch(fileUrl, {
-                mode: "no-cors",
-                credentials: "omit",
-              });
-
-              if (response.type === "opaque") {
-                // For opaque responses, we can't read the content
-                throw new Error(
-                  "Cannot access PDF content due to CORS restrictions"
-                );
-              } else {
-                const arrayBuffer = await response.arrayBuffer();
-                pdfDoc = await pdfjsLib.getDocument({
-                  data: arrayBuffer,
-                }).promise;
-                loadSuccess = true;
-                console.log("PDF loaded successfully via fetch no-cors");
-              }
-            } catch (fetchError) {
-              console.log("Fetch failed, trying public proxy...", fetchError);
-
-              // Strategy 4: Try with a public CORS proxy
-              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`;
-              const proxyResponse = await fetch(proxyUrl);
-
-              if (!proxyResponse.ok) {
-                throw new Error(
-                  `Proxy failed: ${proxyResponse.status} ${proxyResponse.statusText}`
-                );
-              }
-
-              const arrayBuffer = await proxyResponse.arrayBuffer();
-              pdfDoc = await pdfjsLib.getDocument({
-                data: arrayBuffer,
-              }).promise;
-              loadSuccess = true;
-              console.log("PDF loaded successfully via public proxy");
-            }
-          }
-        }
+        const pdfDoc = await loadPdfWithStrategies(fileUrl);
 
         if (cancelled) return;
 
-        if (loadSuccess && pdfDoc) {
-          setPdf(pdfDoc);
-          setTotalPages(pdfDoc.numPages);
-          setError(""); // Clear any previous errors
-
-          // Render first page
-          const page = await pdfDoc.getPage(1);
-          const viewport = page.getViewport({ scale: 1.5 });
-          const canvas = canvasRef.current!;
-          const ctx = canvas.getContext("2d")!;
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-        } else {
-          throw new Error("Failed to load PDF with all strategies");
-        }
+        setPdf(pdfDoc);
+        setTotalPages(pdfDoc.numPages);
+        setError(""); // Clear any previous errors
+        setCanvasReady(false);
       } catch (err) {
         if (!cancelled) {
           console.error("All PDF loading strategies failed:", err);
@@ -168,20 +133,69 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
     };
   }, [fileUrl]);
 
+  // Separate useEffect to render the first page when PDF is loaded and canvas is available
+  useEffect(() => {
+    if (!pdf || !canvasRef.current) return;
+
+    const renderFirstPage = async () => {
+      try {
+        setCanvasReady(false);
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = canvasRef.current;
+
+        if (!canvas) {
+          throw new Error("Canvas not available for rendering");
+        }
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Could not get 2D context from canvas");
+        }
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        setCanvasReady(true);
+      } catch (error) {
+        console.error("Error rendering first page:", error);
+        setError(
+          `Error rendering first page: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    };
+
+    renderFirstPage();
+  }, [pdf]); // This will run when pdf changes
+
   const renderPage = async (pageNum: number) => {
     if (!pdf) return;
 
     try {
+      setCanvasReady(false);
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = canvasRef.current!;
-      const ctx = canvas.getContext("2d")!;
+      const canvas = canvasRef.current;
+
+      if (!canvas) {
+        throw new Error("Canvas not available for rendering");
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Could not get 2D context from canvas");
+      }
+
       canvas.height = viewport.height;
       canvas.width = viewport.width;
       await page.render({ canvasContext: ctx, viewport, canvas }).promise;
       setCurrentPage(pageNum);
-    } catch {
-      setError("Error rendering page");
+      setCanvasReady(true);
+    } catch (error) {
+      console.error("Error rendering page:", error);
+      setError(
+        `Error rendering page: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   };
 
@@ -364,7 +378,15 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
 
       {pdf && !loading && (
         <div className="flex-1 overflow-auto flex justify-center">
-          <canvas ref={canvasRef} />
+          {!canvasReady && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-lg">Rendering PDF...</div>
+            </div>
+          )}
+          <canvas
+            ref={canvasRef}
+            className={`${canvasReady ? "block" : "hidden"}`}
+          />
         </div>
       )}
     </div>
