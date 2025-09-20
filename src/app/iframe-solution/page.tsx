@@ -86,9 +86,16 @@ function InlinePreview({ fileUrl }: Props) {
   }, [fileUrl]);
 
   const handlePrint = () => {
-    const i = iframeRef.current;
-    if (i?.contentWindow) {
-      i.contentWindow.print();
+    try {
+      const i = iframeRef.current;
+      if (i?.contentWindow) {
+        i.contentWindow.print();
+      }
+    } catch (error) {
+      console.error("Error printing PDF:", error);
+      setError(
+        `Error printing PDF: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   };
 
@@ -167,7 +174,7 @@ export default function IframeSolutionPage() {
             </div>
             <Link
               href="/"
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium text-xs"
             >
               ← Back to home
             </Link>
@@ -249,6 +256,11 @@ export default function IframeSolutionPage() {
             <li>• Inconsistent on iOS/Safari PWA</li>
             <li>• Some versions require user gesture to print</li>
             <li>• Dependent on native browser viewer</li>
+            {/* Algunos no es posible previsualizar el PDF cuando se instala la app */}
+            <li>
+              • Some browsers don't allow inline preview when the app is
+              installed(PWAs)
+            </li>
           </ul>
         </div>
       </div>
