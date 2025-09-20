@@ -1,0 +1,27 @@
+ETIQUETA DE ENVÍO
+==================
+
+DESTINATARIO:
+Juan Pérez
+Calle Principal 123
+28001 Madrid, España
+
+REMITENTE:
+Mi Empresa S.L.
+Calle Comercial 456
+28002 Madrid, España
+
+INFORMACIÓN DE ENVÍO:
+- Peso: 2.5 kg
+- Servicio: Express
+- Fecha: 2024-01-15
+- Tracking: ES123456789
+
+CÓDIGO DE BARRAS:
+||| ES123456789 |||
+
+NOTAS:
+Paquete frágil - Manejar con cuidado
+Entrega preferiblemente por la mañana
+
+Generado el: 2024-01-15 10:30:00

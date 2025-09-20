@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Etiqueta de Envío - Muestra</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.4;
+      }
+      .label {
+        border: 2px solid #000;
+        padding: 20px;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #000;
+        padding-bottom: 10px;
+      }
+      .section {
+        margin-bottom: 10px;
+      }
+      .section-title {
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+      .address {
+        font-size: 14px;
+      }
+      .tracking {
+        font-family: "Courier New", monospace;
+        font-size: 16px;
+        background: #f0f0f0;
+        padding: 5px;
+        text-align: center;
+        margin: 10px 0;
+      }
+      .barcode {
+        text-align: center;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        margin: 10px 0;
+        letter-spacing: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="label">
+      <div class="header">ETIQUETA DE ENVÍO</div>
+
+      <div class="section">
+        <div class="section-title">Destinatario:</div>
+        <div class="address">
+          Juan Pérez<br />
+          Calle Principal 123<br />
+          28001 Madrid, España
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Remitente:</div>
+        <div class="address">
+          Mi Empresa S.L.<br />
+          Calle Comercial 456<br />
+          28002 Madrid, España
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Información de Envío:</div>
+        <div>Peso: 2.5 kg</div>
+        <div>Servicio: Express</div>
+        <div>Fecha: 2024-01-15</div>
+      </div>
+
+      <div class="tracking">ES123456789</div>
+
+      <div class="barcode">||| ES123456789 |||</div>
+
+      <div
+        style="
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+          margin-top: 15px;
+        "
+      >
+        Generado el: 2024-01-15 10:30:00
+      </div>
+    </div>
+  </body>
+</html>
