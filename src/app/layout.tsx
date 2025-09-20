@@ -17,15 +17,22 @@ export const metadata: Metadata = {
   description:
     "POC para demostrar diferentes propuestas de previsualización e impresión de archivos",
   manifest: "/manifest.json",
-  themeColor: "#000000",
-  viewport:
-    "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Preview App",
   },
 };
+
+export function generateViewport() {
+  return {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    themeColor: "#000000",
+  };
+}
 
 export default function RootLayout({
   children,

@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "serve": "npx serve@latest out -p 3000",
-    "export": "npm run build && npm run serve"
+    "export": "npm run build && npm run serve",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "next": "15.5.3",
