@@ -1,30 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
-// Componente para renderizar etiquetas HTML optimizadas para impresión
+// Component for rendering HTML labels optimized for printing
 interface LabelData {
+  packageId: string;
   recipient: {
     name: string;
+    email: string;
+    phone: string;
+    identification: string;
     address: string;
-    city: string;
-    state: string;
-    zip: string;
   };
   sender: {
     name: string;
-    address: string;
+    warehouse: string;
   };
-  weight: string;
-  service: string;
-  date: string;
+  items: Array<{
+    name: string;
+    quantity: string;
+    sku: string;
+    description: string;
+  }>;
+  orderDate: string;
+  packingDate: string;
   tracking: string;
 }
 
 function LabelPreview({ labelData }: { labelData: LabelData }) {
   const handlePrint = () => {
-    // Crear una ventana de impresión optimizada para etiquetas
+    // Create a print window optimized for labels
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -32,7 +38,7 @@ function LabelPreview({ labelData }: { labelData: LabelData }) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Etiqueta de Envío</title>
+          <title>Shipping Label</title>
           <style>
             @page {
               size: 4in 6in;
@@ -94,6 +100,14 @@ function LabelPreview({ labelData }: { labelData: LabelData }) {
               font-size: 8px;
               color: #666;
             }
+            .items {
+              font-size: 10px;
+            }
+            .item {
+              margin-bottom: 3px;
+              padding: 2px;
+              background: #f9f9f9;
+            }
             @media print {
               body { margin: 0; }
               .label { border: none; }
@@ -102,45 +116,53 @@ function LabelPreview({ labelData }: { labelData: LabelData }) {
         </head>
         <body>
           <div class="label">
-            <div class="header">ETIQUETA DE ENVÍO</div>
+            <div class="header">SHIPPING LABEL</div>
             
             <div class="section">
-              <div class="section-title">Destinatario:</div>
+              <div class="section-title">Package ID:</div>
+              <div class="tracking">${labelData.packageId}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Recipient:</div>
               <div class="address">
                 ${labelData.recipient.name}<br>
-                ${labelData.recipient.address}<br>
-                ${labelData.recipient.city}, ${labelData.recipient.state} ${
-                  labelData.recipient.zip
-                }
+                ${labelData.recipient.email}<br>
+                ${labelData.recipient.phone}<br>
+                ID: ${labelData.recipient.identification}<br>
+                ${labelData.recipient.address}
               </div>
             </div>
 
             <div class="section">
-              <div class="section-title">Remitente:</div>
+              <div class="section-title">Items:</div>
+              <div class="items">
+                ${labelData.items
+                  .map(
+                    item => `
+                  <div class="item">
+                    ${item.name} - Qty: ${item.quantity}<br>
+                    SKU: ${item.sku}
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Order Info:</div>
               <div class="address">
-                ${labelData.sender.name}<br>
-                ${labelData.sender.address}
+                Order Date: ${labelData.orderDate}<br>
+                Packing Date: ${labelData.packingDate}<br>
+                Warehouse: ${labelData.sender.warehouse}
               </div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Información de Envío:</div>
-              <div>Peso: ${labelData.weight} kg</div>
-              <div>Servicio: ${labelData.service}</div>
-              <div>Fecha: ${labelData.date}</div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Tracking:</div>
-              <div class="tracking">${labelData.tracking}</div>
-            </div>
-
-            <div class="barcode">
-              ||| ${labelData.tracking} |||
-            </div>
+            <div class="barcode">||| ${labelData.packageId} |||</div>
 
             <div class="footer">
-              Generado el ${new Date().toLocaleString()}
+              Generated on ${new Date().toLocaleString()}
             </div>
           </div>
         </body>
@@ -154,39 +176,35 @@ function LabelPreview({ labelData }: { labelData: LabelData }) {
   return (
     <div className="h-96 flex flex-col">
       <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-        <h3 className="font-semibold text-gray-900">
-          Vista Previa de Etiqueta
-        </h3>
+        <h3 className="font-semibold text-gray-900">Label Preview</h3>
         <button
           onClick={handlePrint}
           className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-medium"
         >
-          Imprimir Etiqueta
+          Print Label
         </button>
       </div>
 
       <div className="flex-1 p-4 bg-gray-100 flex items-center justify-center">
         <div className="bg-white border-2 border-dashed border-gray-300 p-4 text-center max-w-sm">
           <div className="text-sm text-gray-600 mb-2">
-            Vista previa de etiqueta 4&quot;x6&quot;
+            Preview of 4&quot;x6&quot; label
           </div>
           <div className="text-xs text-gray-500">
-            <div className="font-bold mb-2">ETIQUETA DE ENVÍO</div>
+            <div className="font-bold mb-2">SHIPPING LABEL</div>
             <div className="text-left">
               <div>
-                <strong>Destinatario:</strong>
+                <strong>Package ID:</strong>
+              </div>
+              <div className="font-mono bg-gray-200 px-2 py-1 rounded text-xs mb-2">
+                {labelData.packageId}
+              </div>
+              <div>
+                <strong>Recipient:</strong>
               </div>
               <div>{labelData.recipient.name}</div>
-              <div>{labelData.recipient.address}</div>
-              <div>
-                {labelData.recipient.city}, {labelData.recipient.state}
-              </div>
-              <div className="mt-2">
-                <strong>Tracking:</strong>
-              </div>
-              <div className="font-mono bg-gray-200 px-2 py-1 rounded text-xs">
-                {labelData.tracking}
-              </div>
+              <div className="text-xs">{labelData.recipient.email}</div>
+              <div className="text-xs">{labelData.recipient.address}</div>
             </div>
           </div>
         </div>
@@ -196,76 +214,55 @@ function LabelPreview({ labelData }: { labelData: LabelData }) {
 }
 
 export default function HtmlPrintSolutionPage() {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [fileUrl, setFileUrl] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [labelData, setLabelData] = useState<LabelData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
-  // Datos de muestra para diferentes tipos de etiquetas
-  const labelTemplates = [
-    {
-      id: "shipping",
-      name: "Etiqueta de Envío",
-      data: {
-        recipient: {
-          name: "Juan Pérez",
-          address: "Calle Principal 123",
-          city: "Madrid",
-          state: "Madrid",
-          zip: "28001",
-        },
-        sender: {
-          name: "Mi Empresa S.L.",
-          address: "Calle Comercial 456",
-        },
-        weight: "2.5",
-        service: "Express",
-        date: new Date().toLocaleDateString(),
-        tracking: "ES123456789",
-      },
-    },
-    {
-      id: "inventory",
-      name: "Etiqueta de Inventario",
-      data: {
-        recipient: {
-          name: "Almacén Central",
-          address: "Zona Industrial 789",
-          city: "Barcelona",
-          state: "Barcelona",
-          zip: "08001",
-        },
-        sender: {
-          name: "Proveedor ABC",
-          address: "Polígono Industrial Norte",
-        },
-        weight: "1.2",
-        service: "Estándar",
-        date: new Date().toLocaleDateString(),
-        tracking: "INV-2024-001",
-      },
-    },
-    {
-      id: "return",
-      name: "Etiqueta de Devolución",
-      data: {
-        recipient: {
-          name: "Centro de Devoluciones",
-          address: "Calle Retorno 321",
-          city: "Valencia",
-          state: "Valencia",
-          zip: "46001",
-        },
-        sender: {
-          name: "Cliente: María García",
-          address: "Calle Cliente 654",
-        },
-        weight: "0.8",
-        service: "Devolución",
-        date: new Date().toLocaleDateString(),
-        tracking: "RET-2024-001",
-      },
-    },
-  ];
+  const defaultUrl =
+    "https://pickpack-assets.s3.us-east-1.amazonaws.com/serverless/pnp/dev/printed-labels/packages/00bece1b-fa2d-4111-b9f2-e262db7064cd.pdf";
 
-  const selectedLabel = labelTemplates.find(t => t.id === selectedTemplate);
+  // Sample data extracted from the PDF
+  const sampleLabelData: LabelData = {
+    packageId: "00bece1b-fa2d-4111-b9f2-e262db7064cd",
+    recipient: {
+      name: "D. test",
+      email: "arangomonsalve.daniel@gmail.com",
+      phone: "+573204567890",
+      identification: "1034567890",
+      address: "Bello - Medellin",
+    },
+    sender: {
+      name: "PickPack",
+      warehouse: "ColombiaMAIN",
+    },
+    items: [
+      {
+        name: "Camisa live shop Talla M",
+        quantity: "02 Units",
+        sku: "1310",
+        description: "Apparel",
+      },
+    ],
+    orderDate: "2/12/2025, 4:36:36 PM",
+    packingDate: "4/15/2025, 3:04:19 PM",
+    tracking: "1510250516125-01",
+  };
+
+  const handlePreview = () => {
+    if (fileUrl.trim()) {
+      setPreviewUrl(fileUrl.trim());
+      // For demo purposes, use sample data
+      setLabelData(sampleLabelData);
+    }
+  };
+
+  const handleUseDefault = () => {
+    setFileUrl(defaultUrl);
+    setPreviewUrl(defaultUrl);
+    setLabelData(sampleLabelData);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,17 +271,17 @@ export default function HtmlPrintSolutionPage() {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Propuesta 3: HTML-to-Print
+                Proposal 3: HTML-to-Print
               </h1>
               <p className="text-gray-600">
-                Renderizado HTML optimizado para impresión térmica
+                HTML rendering optimized for thermal printing
               </p>
             </div>
             <Link
               href="/"
               className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium"
             >
-              ← Volver al inicio
+              ← Back to home
             </Link>
           </div>
         </div>
@@ -293,70 +290,85 @@ export default function HtmlPrintSolutionPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Seleccionar tipo de etiqueta
+            Enter PDF URL
           </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {labelTemplates.map(template => (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-purple-800">
+              <strong>Note:</strong> This solution generates HTML labels without
+              fetching external PDFs. Perfect for client-side only applications.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={fileUrl}
+                onChange={e => setFileUrl(e.target.value)}
+                placeholder="Enter PDF URL here..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
               <button
-                key={template.id}
-                onClick={() => setSelectedTemplate(template.id)}
-                className={`p-4 border rounded-lg text-left hover:bg-gray-50 ${
-                  selectedTemplate === template.id
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200"
-                }`}
+                onClick={handlePreview}
+                disabled={!fileUrl.trim()}
+                className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white px-6 py-2 rounded font-medium"
               >
-                <div className="font-medium text-gray-900">{template.name}</div>
-                <div className="text-sm text-gray-500 mt-1">
-                  Tracking: {template.data.tracking}
-                </div>
+                Preview
               </button>
-            ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleUseDefault}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium text-sm"
+              >
+                Use Sample PDF
+              </button>
+              <div className="text-sm text-gray-500 flex items-center">
+                Sample: PickPack shipping label
+              </div>
+            </div>
           </div>
         </div>
 
-        {selectedLabel && (
+        {labelData && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <LabelPreview labelData={selectedLabel.data} />
+            <LabelPreview labelData={labelData} />
           </div>
         )}
 
         <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
           <h3 className="font-semibold text-purple-900 mb-2">
-            Ventajas de esta propuesta:
+            Advantages of this proposal:
           </h3>
           <ul className="text-purple-800 space-y-1">
-            <li>• Optimizado para impresoras térmicas (4&quot;x6&quot;)</li>
-            <li>• Control total sobre el diseño y layout</li>
-            <li>• No requiere archivos PDF externos</li>
-            <li>• Imprime nítido en impresoras térmicas</li>
-            <li>• Fácil personalización de plantillas</li>
-            <li>• Funciona perfectamente en PWAs</li>
+            <li>• Optimized for thermal printers (4&quot;x6&quot;)</li>
+            <li>• Full control over design and layout</li>
+            <li>• No external PDF files required</li>
+            <li>• Sharp printing on thermal printers</li>
+            <li>• Easy template customization</li>
+            <li>• Works perfectly in PWAs</li>
           </ul>
         </div>
 
         <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="font-semibold text-yellow-900 mb-2">
-            Consideraciones:
+            Considerations:
           </h3>
           <ul className="text-yellow-800 space-y-1">
-            <li>• Solo para contenido que se puede representar en HTML</li>
-            <li>• Requiere diseño específico para cada tipo de etiqueta</li>
-            <li>• No es adecuado para documentos complejos</li>
-            <li>• Dependiente del CSS de impresión del navegador</li>
+            <li>• Only for content that can be represented in HTML</li>
+            <li>• Requires specific design for each label type</li>
+            <li>• Not suitable for complex documents</li>
+            <li>• Dependent on browser print CSS</li>
           </ul>
         </div>
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">
-            Casos de uso ideales:
-          </h3>
+          <h3 className="font-semibold text-blue-900 mb-2">Ideal use cases:</h3>
           <ul className="text-blue-800 space-y-1">
-            <li>• Etiquetas de envío y paquetes</li>
-            <li>• Etiquetas de inventario</li>
-            <li>• Tickets y recibos</li>
-            <li>• Códigos de barras y QR</li>
-            <li>• Cualquier contenido que se imprima en formato pequeño</li>
+            <li>• Shipping and package labels</li>
+            <li>• Inventory labels</li>
+            <li>• Tickets and receipts</li>
+            <li>• Barcodes and QR codes</li>
+            <li>• Any content printed in small format</li>
           </ul>
         </div>
       </div>

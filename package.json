@@ -13,7 +13,6 @@
     "export": "npm run build && npm run serve"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.1.13",
     "next": "15.5.3",
     "next-pwa": "^5.6.0",
     "pdfjs-dist": "^3.11.174",
@@ -26,6 +25,7 @@
     "@types/node": "^20.18.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.3",
     "postcss": "^8.4.49",

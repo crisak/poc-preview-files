@@ -9,20 +9,19 @@ export default function Home() {
             POC Preview App
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Demostración de diferentes propuestas para previsualización e
-            impresión de archivos
+            Demonstration of different proposals for file preview and printing
           </p>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
             <h2 className="text-lg font-semibold text-yellow-800 mb-2">
-              Problema Actual
+              Current Problem
             </h2>
             <p className="text-yellow-700">
-              Los usuarios reportan que al usar{" "}
+              Users report that when using{" "}
               <code className="bg-yellow-100 px-2 py-1 rounded">
                 window.open()
               </code>
-              no pueden imprimir directamente desde la PWA, requiriendo pasos
-              adicionales como capturas de pantalla.
+              they cannot print directly from the PWA, requiring additional
+              steps like screenshots.
             </p>
           </div>
         </div>
@@ -33,9 +32,9 @@ export default function Home() {
             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200"
           >
             <div className="text-center">
-              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="bg-blue-100 w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-8 h-8 text-blue-600"
+                  className="w-4 h-4 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -55,14 +54,14 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Propuesta 1: iframe
+                Proposal 1: iframe
               </h3>
               <p className="text-gray-600 mb-4">
-                Previsualización nativa usando iframe con blob URL y
+                Native preview using iframe with blob URL and
                 contentWindow.print()
               </p>
               <div className="text-sm text-blue-600 font-medium">
-                Ver implementación →
+                View implementation →
               </div>
             </div>
           </Link>
@@ -72,9 +71,9 @@ export default function Home() {
             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200"
           >
             <div className="text-center">
-              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="bg-green-100 w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-8 h-8 text-green-600"
+                  className="w-4 h-4 text-green-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -88,13 +87,13 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Propuesta 2: PDF.js
+                Proposal 2: PDF.js
               </h3>
               <p className="text-gray-600 mb-4">
-                Renderizado con PDF.js para mayor control y consistencia en PWAs
+                Rendering with PDF.js for better control and consistency in PWAs
               </p>
               <div className="text-sm text-green-600 font-medium">
-                Ver implementación →
+                View implementation →
               </div>
             </div>
           </Link>
@@ -104,9 +103,9 @@ export default function Home() {
             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200"
           >
             <div className="text-center">
-              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="bg-purple-100 w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-8 h-8 text-purple-600"
+                  className="w-4 h-4 text-purple-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -120,13 +119,13 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Propuesta 3: HTML-to-Print
+                Proposal 3: HTML-to-Print
               </h3>
               <p className="text-gray-600 mb-4">
-                Renderizado HTML optimizado para impresión térmica sin PDFs
+                HTML rendering optimized for thermal printing without PDFs
               </p>
               <div className="text-sm text-purple-600 font-medium">
-                Ver implementación →
+                View implementation →
               </div>
             </div>
           </Link>
@@ -134,7 +133,7 @@ export default function Home() {
 
         <div className="mt-12 bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Características del POC
+            POC Features
           </h2>
           <ul className="space-y-2 text-gray-600">
             <li className="flex items-center">
@@ -149,7 +148,7 @@ export default function Home() {
                   clipRule="evenodd"
                 />
               </svg>
-              Aplicación PWA completa (instalable en dispositivos móviles)
+              Complete PWA application (installable on mobile devices)
             </li>
             <li className="flex items-center">
               <svg
@@ -163,7 +162,7 @@ export default function Home() {
                   clipRule="evenodd"
                 />
               </svg>
-              Previsualización de PDFs, imágenes y archivos de texto
+              Preview of PDFs, images and text files
             </li>
             <li className="flex items-center">
               <svg
@@ -177,7 +176,7 @@ export default function Home() {
                   clipRule="evenodd"
                 />
               </svg>
-              Funcionalidad de impresión integrada en cada propuesta
+              Integrated printing functionality in each proposal
             </li>
             <li className="flex items-center">
               <svg
@@ -191,7 +190,7 @@ export default function Home() {
                   clipRule="evenodd"
                 />
               </svg>
-              Solución al problema reportado en ticket PAP_2611
+              Solution to the problem reported in ticket PAP_2611
             </li>
           </ul>
         </div>

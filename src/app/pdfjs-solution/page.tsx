@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-// Importar PDF.js solo en el cliente
+// Import PDF.js only on client side
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pdfjsLib: any = null;
 if (typeof window !== "undefined") {
@@ -18,6 +18,7 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
   const [error, setError] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [isPrinting, setIsPrinting] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pdf, setPdf] = useState<any>(null);
 
@@ -26,34 +27,134 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
 
     const loadPdf = async () => {
       if (!pdfjsLib) {
-        setError("PDF.js no está disponible");
+        setError("PDF.js is not available");
         return;
       }
 
       try {
         setLoading(true);
         setError("");
-        const pdfDoc = await pdfjsLib.getDocument({
-          url: fileUrl,
-          withCredentials: true,
-        }).promise;
+
+        // Try multiple strategies to load the PDF
+        let pdfDoc;
+        let loadSuccess = false;
+
+        // Strategy 1: Try to load directly from URL (works for some CORS scenarios)
+        try {
+          pdfDoc = await pdfjsLib.getDocument({
+            url: fileUrl,
+            withCredentials: false,
+            httpHeaders: {
+              Accept: "application/pdf",
+            },
+          }).promise;
+          loadSuccess = true;
+          console.log("PDF loaded successfully via direct URL");
+        } catch (directError) {
+          console.log(
+            "Direct URL failed, trying XMLHttpRequest...",
+            directError
+          );
+
+          // Strategy 2: Download as bytes using XMLHttpRequest
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", fileUrl, true);
+            xhr.responseType = "arraybuffer";
+            xhr.withCredentials = false;
+
+            const pdfData = await new Promise<ArrayBuffer>(
+              (resolve, reject) => {
+                xhr.onload = () => {
+                  if (xhr.status === 200) {
+                    resolve(xhr.response);
+                  } else {
+                    reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                  }
+                };
+                xhr.onerror = () => reject(new Error("Network error occurred"));
+                xhr.ontimeout = () => reject(new Error("Request timeout"));
+                xhr.timeout = 30000;
+                xhr.send();
+              }
+            );
+
+            // Load PDF from downloaded data
+            pdfDoc = await pdfjsLib.getDocument({
+              data: pdfData,
+            }).promise;
+            loadSuccess = true;
+            console.log("PDF loaded successfully via XMLHttpRequest");
+          } catch (xhrError) {
+            console.log("XMLHttpRequest failed, trying fetch...", xhrError);
+
+            // Strategy 3: Try fetch with no-cors mode
+            try {
+              const response = await fetch(fileUrl, {
+                mode: "no-cors",
+                credentials: "omit",
+              });
+
+              if (response.type === "opaque") {
+                // For opaque responses, we can't read the content
+                throw new Error(
+                  "Cannot access PDF content due to CORS restrictions"
+                );
+              } else {
+                const arrayBuffer = await response.arrayBuffer();
+                pdfDoc = await pdfjsLib.getDocument({
+                  data: arrayBuffer,
+                }).promise;
+                loadSuccess = true;
+                console.log("PDF loaded successfully via fetch no-cors");
+              }
+            } catch (fetchError) {
+              console.log("Fetch failed, trying public proxy...", fetchError);
+
+              // Strategy 4: Try with a public CORS proxy
+              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`;
+              const proxyResponse = await fetch(proxyUrl);
+
+              if (!proxyResponse.ok) {
+                throw new Error(
+                  `Proxy failed: ${proxyResponse.status} ${proxyResponse.statusText}`
+                );
+              }
+
+              const arrayBuffer = await proxyResponse.arrayBuffer();
+              pdfDoc = await pdfjsLib.getDocument({
+                data: arrayBuffer,
+              }).promise;
+              loadSuccess = true;
+              console.log("PDF loaded successfully via public proxy");
+            }
+          }
+        }
 
         if (cancelled) return;
 
-        setPdf(pdfDoc);
-        setTotalPages(pdfDoc.numPages);
+        if (loadSuccess && pdfDoc) {
+          setPdf(pdfDoc);
+          setTotalPages(pdfDoc.numPages);
+          setError(""); // Clear any previous errors
 
-        // Renderizar primera página
-        const page = await pdfDoc.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = canvasRef.current!;
-        const ctx = canvas.getContext("2d")!;
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          // Render first page
+          const page = await pdfDoc.getPage(1);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = canvasRef.current!;
+          const ctx = canvas.getContext("2d")!;
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        } else {
+          throw new Error("Failed to load PDF with all strategies");
+        }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Error loading PDF");
+          console.error("All PDF loading strategies failed:", err);
+          setError(
+            "Cannot load PDF due to CORS restrictions. Please try the iframe solution or use a CORS-enabled URL."
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -85,49 +186,138 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
   };
 
   const handlePrint = async () => {
-    // Crear una ventana de impresión con el canvas
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+    if (!pdf) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    setIsPrinting(true);
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Imprimir PDF</title>
-          <style>
-            body { margin: 0; padding: 20px; }
-            img { max-width: 100%; height: auto; }
-          </style>
-        </head>
-        <body>
-          <img src="${canvas.toDataURL()}" alt="PDF Page" />
-        </body>
-      </html>
-    `);
+    try {
+      // Create a new window for printing
+      const printWindow = window.open("", "_blank", "width=800,height=600");
+      if (!printWindow) {
+        alert("Please allow popups to print this document.");
+        setIsPrinting(false);
+        return;
+      }
 
-    printWindow.document.close();
-    printWindow.print();
+      // Render all pages for printing
+      const printCanvas = document.createElement("canvas");
+      const printCtx = printCanvas.getContext("2d");
+      if (!printCtx) {
+        setIsPrinting(false);
+        return;
+      }
+
+      let allPagesHTML = "";
+
+      // Start with a loading message
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print PDF - ${totalPages} pages</title>
+            <style>
+              body { 
+                margin: 0; 
+                padding: 20px; 
+                font-family: Arial, sans-serif;
+                text-align: center;
+              }
+              .loading { font-size: 18px; color: #666; }
+              img { 
+                max-width: 100%; 
+                height: auto; 
+                display: block;
+                margin: 0 auto 20px auto;
+                border: 1px solid #ddd;
+              }
+              @media print {
+                body { padding: 0; }
+                img { page-break-after: always; margin-bottom: 0; }
+                img:last-child { page-break-after: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="loading">Preparing PDF for printing... (${totalPages} pages)</div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      // Render each page
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 }); // Good balance of quality and performance
+
+        printCanvas.width = viewport.width;
+        printCanvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: printCtx,
+          viewport: viewport,
+        }).promise;
+
+        // Convert canvas to image data URL
+        const imageDataUrl = printCanvas.toDataURL("image/png");
+        allPagesHTML += `<img src="${imageDataUrl}" alt="PDF Page ${pageNum}" />`;
+      }
+
+      // Update the window with all pages
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print PDF - ${totalPages} pages</title>
+            <style>
+              body { 
+                margin: 0; 
+                padding: 20px; 
+                font-family: Arial, sans-serif;
+              }
+              img { 
+                max-width: 100%; 
+                height: auto; 
+                display: block;
+                margin: 0 auto 20px auto;
+                border: 1px solid #ddd;
+              }
+              @media print {
+                body { padding: 0; }
+                img { page-break-after: always; margin-bottom: 0; }
+                img:last-child { page-break-after: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            ${allPagesHTML}
+            <script>
+              // Auto-print after a short delay to ensure images are loaded
+              setTimeout(function() {
+                window.print();
+              }, 1000);
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Error printing PDF:", error);
+      alert(
+        "Error printing PDF: " +
+          (error instanceof Error ? error.message : String(error))
+      );
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <div
-        style={{
-          padding: 8,
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="h-screen flex flex-col">
+      <div className="p-2 flex gap-2 items-center flex-wrap">
         <button
           onClick={handlePrint}
-          disabled={!pdf || loading}
+          disabled={!pdf || loading || isPrinting}
           className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded font-medium"
         >
-          {loading ? "Cargando..." : "Imprimir"}
+          {loading ? "Loading..." : isPrinting ? "Preparing print..." : "Print"}
         </button>
 
         {totalPages > 1 && (
@@ -140,7 +330,7 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
               ←
             </button>
             <span className="text-sm text-gray-600">
-              Página {currentPage} de {totalPages}
+              Page {currentPage} of {totalPages}
             </span>
             <button
               onClick={() => renderPage(currentPage + 1)}
@@ -156,7 +346,7 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
           href="/"
           className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium"
         >
-          ← Volver
+          ← Back
         </Link>
       </div>
 
@@ -168,19 +358,12 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
 
       {loading && (
         <div className="flex items-center justify-center flex-1">
-          <div className="text-lg">Cargando PDF...</div>
+          <div className="text-lg">Loading PDF...</div>
         </div>
       )}
 
       {pdf && !loading && (
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
+        <div className="flex-1 overflow-auto flex justify-center">
           <canvas ref={canvasRef} />
         </div>
       )}
@@ -189,13 +372,22 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
 }
 
 export default function PdfJsSolutionPage() {
-  const [selectedFile, setSelectedFile] = useState<string>("");
+  const [fileUrl, setFileUrl] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  // URLs de archivos de muestra
-  const sampleFiles = [
-    { name: "HTML de muestra (como PDF)", url: "/sample-files/sample.html" },
-    { name: "Texto de muestra (como PDF)", url: "/sample-files/sample.txt" },
-  ];
+  const defaultUrl =
+    "https://pickpack-assets.s3.us-east-1.amazonaws.com/serverless/pnp/dev/printed-labels/packages/00bece1b-fa2d-4111-b9f2-e262db7064cd.pdf";
+
+  const handlePreview = () => {
+    if (fileUrl.trim()) {
+      setPreviewUrl(fileUrl.trim());
+    }
+  };
+
+  const handleUseDefault = () => {
+    setFileUrl(defaultUrl);
+    setPreviewUrl(defaultUrl);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -204,17 +396,17 @@ export default function PdfJsSolutionPage() {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Propuesta 2: PDF.js
+                Proposal 2: PDF.js
               </h1>
               <p className="text-gray-600">
-                Renderizado con PDF.js para mayor control y consistencia
+                Rendering with PDF.js for better control and consistency
               </p>
             </div>
             <Link
               href="/"
               className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium"
             >
-              ← Volver al inicio
+              ← Back to home
             </Link>
           </div>
         </div>
@@ -223,59 +415,80 @@ export default function PdfJsSolutionPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Seleccionar archivo PDF
+            Enter PDF URL
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {sampleFiles.map(file => (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-green-800">
+              <strong>Note:</strong> This solution tries multiple strategies to
+              load PDFs: direct URL, XMLHttpRequest download, fetch with
+              no-cors, and public proxy. It should work with most URLs that work
+              in your existing application.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={fileUrl}
+                onChange={e => setFileUrl(e.target.value)}
+                placeholder="Enter PDF URL here..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
               <button
-                key={file.url}
-                onClick={() => setSelectedFile(file.url)}
-                className={`p-4 border rounded-lg text-left hover:bg-gray-50 ${
-                  selectedFile === file.url
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-200"
-                }`}
+                onClick={handlePreview}
+                disabled={!fileUrl.trim()}
+                className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-6 py-2 rounded font-medium"
               >
-                <div className="font-medium text-gray-900">{file.name}</div>
-                <div className="text-sm text-gray-500">{file.url}</div>
+                Preview
               </button>
-            ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleUseDefault}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium text-sm"
+              >
+                Use Sample PDF
+              </button>
+              <div className="text-sm text-gray-500 flex items-center">
+                Sample: PickPack shipping label
+              </div>
+            </div>
           </div>
         </div>
 
-        {selectedFile && (
+        {previewUrl && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-4 border-b bg-gray-50">
               <h3 className="font-semibold text-gray-900">
-                Previsualización: {selectedFile}
+                Preview: {previewUrl}
               </h3>
             </div>
-            <PdfJsViewer fileUrl={selectedFile} />
+            <PdfJsViewer fileUrl={previewUrl} />
           </div>
         )}
 
         <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
           <h3 className="font-semibold text-green-900 mb-2">
-            Ventajas de esta propuesta:
+            Advantages of this proposal:
           </h3>
           <ul className="text-green-800 space-y-1">
-            <li>• Funciona consistentemente en PWAs (iOS/Android)</li>
-            <li>• Control total sobre la interfaz de usuario</li>
-            <li>• Soporte para navegación entre páginas</li>
-            <li>• Zoom y controles personalizables</li>
-            <li>• No depende del visor nativo del navegador</li>
+            <li>• Works consistently in PWAs (iOS/Android)</li>
+            <li>• Full control over user interface</li>
+            <li>• Support for page navigation</li>
+            <li>• Customizable zoom and controls</li>
+            <li>• Not dependent on native browser viewer</li>
           </ul>
         </div>
 
         <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="font-semibold text-yellow-900 mb-2">
-            Consideraciones:
+            Considerations:
           </h3>
           <ul className="text-yellow-800 space-y-1">
-            <li>• Aumenta el tamaño del bundle</li>
-            <li>• Requiere configuración adicional del worker</li>
-            <li>• Solo funciona con archivos PDF</li>
-            <li>• Puede ser más lento para archivos grandes</li>
+            <li>• Increases bundle size</li>
+            <li>• Requires additional worker configuration</li>
+            <li>• Only works with PDF files</li>
+            <li>• Can be slower for large files</li>
           </ul>
         </div>
       </div>
