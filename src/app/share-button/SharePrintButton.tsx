@@ -27,6 +27,13 @@ export function SharePrintButton({
         type: blob.type || "application/octet-stream",
       });
 
+      // 2.2 show alert if support share API or not
+      if ((navigator as any)?.share || (navigator as any)?.canShare) {
+        alert("✅ Browser supported share API");
+      } else {
+        alert("❌ Browser not supported share API");
+      }
+
       // 3) Verificar soporte (Web Share Level 2) y compartir
       if ((navigator as any).canShare?.({ files: [file] })) {
         console.log("Soporta share de archivos");
