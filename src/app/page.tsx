@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 
 export default function Home() {
@@ -11,18 +12,52 @@ export default function Home() {
           <p className="text-xl text-gray-600 mb-8">
             Demonstration of different proposals for file preview and printing
           </p>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
-            <h2 className="text-lg font-semibold text-yellow-800 mb-2">
-              Current Problem
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 text-left">
+            <h2 className="text-lg font-semibold text-red-800 mb-2">
+              Current Implementation (Not Working)
             </h2>
-            <p className="text-yellow-700">
-              Users report that when using{" "}
-              <code className="bg-yellow-100 px-2 py-1 rounded">
+            <p className="text-red-700 mb-3">
+              Our current implementation uses{" "}
+              <code className="bg-red-100 px-2 py-1 rounded">
                 window.open()
-              </code>
-              they cannot print directly from the PWA, requiring additional
-              steps like screenshots.
+              </code>{" "}
+              which doesn't work properly in PWAs for direct printing.
             </p>
+            <div className="bg-gray-900 text-green-400 p-3 rounded text-sm font-mono overflow-x-auto">
+              <pre>{`const printLabel = async (pkgId: string) => {
+  setLoadLabel(true);
+  const PROTOCOL_URI = \`\${process.env.NEXT_PUBLIC_LABEL_REST_URL}/package/\${account}/\${pkgId}\`;
+  await getPrintPicking(PROTOCOL_URI, user?.language)
+    .then((data) => {
+      if (data?.data?.urlFile) {
+        window.open(data.data.urlFile, '_blank'); // ❌ Doesn't work in PWAs
+      } else {
+        toast.error(data?.message);
+      }
+    })
+    .finally(() => setLoadLabel(false));
+};`}</pre>
+            </div>
+            <p className="text-red-700 mt-3 text-sm">
+              <strong>Problem:</strong> Users cannot print directly from the
+              PWA, requiring additional steps like screenshots.
+            </p>
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  // Simular la implementación actual que no funciona
+                  const sampleUrl =
+                    "https://pickpack-assets.s3.us-east-1.amazonaws.com/serverless/pnp/dev/printed-labels/packages/00bece1b-fa2d-4111-b9f2-e262db7064cd.pdf";
+                  window.open(sampleUrl, "_blank");
+                  alert(
+                    "This is what happens with our current implementation:\n\n1. PDF opens in new tab\n2. User must manually print from browser\n3. In PWA, this often doesn't work properly\n4. User needs to take screenshots instead"
+                  );
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium text-sm"
+              >
+                🚫 Try Current Implementation (Demo)
+              </button>
+            </div>
           </div>
         </div>
 

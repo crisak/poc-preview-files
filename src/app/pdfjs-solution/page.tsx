@@ -331,7 +331,11 @@ function PdfJsViewer({ fileUrl }: { fileUrl: string }) {
           disabled={!pdf || loading || isPrinting}
           className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded font-medium"
         >
-          {loading ? "Loading..." : isPrinting ? "Preparing print..." : "Print"}
+          {loading
+            ? "Loading..."
+            : isPrinting
+              ? "Preparing print..."
+              : "Canvas for print"}
         </button>
 
         {totalPages > 1 && (

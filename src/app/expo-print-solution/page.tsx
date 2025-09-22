@@ -9,18 +9,20 @@ const mockExpoPrint = {
   printAsync: async (options: { uri: string }) => {
     // Simulación de la funcionalidad de expo-print
     console.log("Printing PDF with expo-print:", options.uri);
-    
+
     // En una aplicación real con Expo, esto abriría el diálogo de impresión nativo
     // y manejaría la impresión del PDF directamente desde la URL
-    
+
     // Para esta demo, simulamos el comportamiento
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       setTimeout(() => {
-        alert(`PDF would be printed from URL: ${options.uri}\n\nIn a real Expo app, this would open the native print dialog.`);
+        alert(
+          `PDF would be printed from URL: ${options.uri}\n\nIn a real Expo app, this would open the native print dialog.`
+        );
         resolve({ uri: options.uri });
       }, 1000);
     });
-  }
+  },
 };
 
 function ExpoPrintViewer({ fileUrl }: { fileUrl: string }) {
@@ -34,7 +36,7 @@ function ExpoPrintViewer({ fileUrl }: { fileUrl: string }) {
 
       // Usar expo-print con el parámetro uri
       await mockExpoPrint.printAsync({
-        uri: fileUrl
+        uri: fileUrl,
       });
     } catch (err) {
       console.error("Error printing PDF:", err);
@@ -92,7 +94,9 @@ function ExpoPrintViewer({ fileUrl }: { fileUrl: string }) {
             expo-print Solution
           </h3>
           <p className="text-gray-600 mb-4">
-            This solution uses expo-print with the <code className="bg-gray-200 px-2 py-1 rounded">uri</code> parameter to print PDFs directly from URLs.
+            This solution uses expo-print with the{" "}
+            <code className="bg-gray-200 px-2 py-1 rounded">uri</code> parameter
+            to print PDFs directly from URLs.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
             <h4 className="font-semibold text-blue-900 mb-2">How it works:</h4>
@@ -104,7 +108,9 @@ function ExpoPrintViewer({ fileUrl }: { fileUrl: string }) {
             </ul>
           </div>
           <div className="mt-4 text-sm text-gray-500">
-            <p><strong>URL:</strong> {fileUrl || "No URL provided"}</p>
+            <p>
+              <strong>URL:</strong> {fileUrl || "No URL provided"}
+            </p>
           </div>
         </div>
       </div>
@@ -160,8 +166,10 @@ export default function ExpoPrintSolutionPage() {
           </h2>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
             <p className="text-sm text-purple-800">
-              <strong>Note:</strong> This solution uses expo-print with the uri parameter to print PDFs directly from URLs. 
-              This is ideal for React Native/Expo applications where you need native printing capabilities without complex rendering.
+              <strong>Note:</strong> This solution uses expo-print with the uri
+              parameter to print PDFs directly from URLs. This is ideal for
+              React Native/Expo applications where you need native printing
+              capabilities without complex rendering.
             </p>
           </div>
           <div className="space-y-4">
@@ -226,9 +234,14 @@ export default function ExpoPrintSolutionPage() {
           </h3>
           <ul className="text-yellow-800 space-y-1">
             <li>• Only works in React Native/Expo environments</li>
+            <li>
+              • Cannot be used outside Expo context - would require converting
+              entire app to React Native
+            </li>
             <li>• Requires expo-print dependency</li>
             <li>• No preview functionality (direct print)</li>
             <li>• Platform-specific behavior may vary</li>
+            <li>• Not suitable for web applications or PWAs</li>
           </ul>
         </div>
 
@@ -250,13 +263,25 @@ const printPdf = async (pdfUrl: string) => {
         </div>
 
         <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-2">Ideal use cases:</h3>
+          <h3 className="font-semibold text-green-900 mb-2">
+            Ideal use cases:
+          </h3>
           <ul className="text-green-800 space-y-1">
             <li>• React Native/Expo mobile applications</li>
             <li>• When you need direct printing without preview</li>
             <li>• Apps targeting mobile devices with native printing</li>
             <li>• Simple PDF printing workflows</li>
             <li>• Integration with existing Expo/React Native codebases</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="font-semibold text-red-900 mb-2">Not suitable for:</h3>
+          <ul className="text-red-800 space-y-1">
+            <li>• Web applications or PWAs (like this current app)</li>
+            <li>• Next.js, React, or vanilla JavaScript projects</li>
+            <li>• When you cannot migrate to React Native/Expo</li>
+            <li>• Cross-platform web solutions</li>
           </ul>
         </div>
       </div>
